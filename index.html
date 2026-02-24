@@ -3,51 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MJ E-Commerce - Katalog</title>
+    <title>MJ E-Commerce - Katalog Produk</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
-        h1 { text-align: center; color: #333; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
+        header { text-align: center; padding: 40px 20px; background: white; margin-bottom: 30px; border-radius: 0 0 20px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        h1 { margin: 0; color: #333; font-size: 2em; }
+        .container { max-width: 1100px; margin: auto; }
+        
+        /* Loading Style */
+        #loading { text-align: center; padding: 50px; font-size: 1.2em; color: #666; }
+        
+        /* Grid Katalog */
         .grid-container { 
             display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); 
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); 
             gap: 20px; 
-            max-width: 1000px; 
-            margin: 30px auto; 
         }
+
+        /* Card Produk */
         .card { 
             background: white; 
-            border-radius: 12px; 
+            border-radius: 15px; 
             overflow: hidden; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
-            transition: 0.3s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08); 
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            display: flex;
+            flex-direction: column;
         }
-        .card:hover { transform: translateY(-5px); }
-        .card img { width: 100%; height: 200px; object-fit: cover; }
-        .card-info { padding: 15px; }
-        .card-info h3 { margin: 0; font-size: 1.1em; color: #333; }
-        .price { color: #28a745; font-weight: bold; font-size: 1.2em; margin-top: 10px; }
-        .btn-beli { 
+        .card:hover { transform: translateY(-8px); box-shadow: 0 10px 20px rgba(0,0,0,0.15); }
+        
+        .card img { width: 100%; height: 230px; object-fit: cover; border-bottom: 1px solid #eee; }
+        
+        .card-info { padding: 15px; flex-grow: 1; display: flex; flex-direction: column; }
+        .card-info h3 { margin: 0; font-size: 1.05em; color: #444; height: 2.4em; overflow: hidden; }
+        .price { color: #28a745; font-weight: bold; font-size: 1.25em; margin: 10px 0; }
+        
+        /* Tombol Detail */
+        .btn-detail { 
             display: block; 
             text-align: center; 
             background: #007bff; 
             color: white; 
             text-decoration: none; 
-            padding: 10px; 
-            margin-top: 10px; 
-            border-radius: 6px;
+            padding: 12px; 
+            border-radius: 8px; 
+            font-weight: 600;
+            transition: background 0.2s;
         }
-        #loading { text-align: center; font-size: 1.2em; color: #666; }
+        .btn-detail:hover { background: #0056b3; }
+
+        @media (max-width: 600px) {
+            .grid-container { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .card img { height: 160px; }
+            h1 { font-size: 1.5em; }
+        }
     </style>
 </head>
 <body>
 
-    <h1>🛍️ Katalog MJ Store</h1>
-    
-    <div id="loading">Sedang memuat produk...</div>
-    <div class="grid-container" id="katalog"></div>
+    <header>
+        <h1>🛍️ MJ STORE CATALOG</h1>
+        <p>Produk terbaru langsung dari gudang</p>
+    </header>
+
+    <div class="container">
+        <div id="loading">Memuat produk keren untukmu...</div>
+        <div class="grid-container" id="katalog"></div>
+    </div>
 
     <script>
-        // --- KONFIGURASI ---
+        // --- KONFIGURASI REPO ---
         const USERNAME = "hamudi2012";
         const REPO = "Mj-E-commerce-";
 
@@ -56,43 +81,52 @@
             const loading = document.getElementById('loading');
 
             try {
-                // 1. Ambil daftar file di folder database/products
+                // 1. Ambil list file di folder database/products
                 const response = await fetch(`https://api.github.com/repos/${USERNAME}/${REPO}/contents/database/products/`);
+                
+                if (!response.ok) throw new Error("Gagal akses folder database.");
+                
                 const files = await response.json();
 
-                if (files.length === 0) {
-                    loading.innerText = "Belum ada produk yang dipajang.";
+                // Filter hanya file .json dan urutkan dari yang terbaru (file terakhir yang diupload)
+                const jsonFiles = files.filter(f => f.name.endsWith('.json')).reverse();
+
+                if (jsonFiles.length === 0) {
+                    loading.innerText = "Katalog kosong. Mulai upload barang dari halaman admin!";
                     return;
                 }
 
-                // 2. Loop setiap file untuk ambil datanya
-                for (let file of files) {
-                    if (file.name.endsWith('.json')) {
+                // 2. Ambil isi tiap file JSON
+                for (let file of jsonFiles) {
+                    try {
                         const resData = await fetch(file.download_url);
                         const produk = await resData.json();
 
-                        // 3. Render ke HTML
+                        // 3. Buat Card Produk dengan Link Otomatis ke detail.html
                         const card = `
                             <div class="card">
                                 <img src="${produk.foto}" alt="${produk.nama}">
                                 <div class="card-info">
                                     <h3>${produk.nama}</h3>
                                     <div class="price">Rp ${parseInt(produk.harga).toLocaleString('id-ID')}</div>
-                                    <a href="https://wa.me/628123456789?text=Halo, saya mau beli ${produk.nama}" class="btn-beli">Beli via WA</a>
+                                    <a href="detail.html?id=${produk.id}" class="btn-detail">Lihat Detail</a>
                                 </div>
                             </div>
                         `;
                         katalogDiv.innerHTML += card;
+                    } catch (e) {
+                        console.error("Gagal memuat file:", file.name);
                     }
                 }
                 loading.style.display = 'none';
 
             } catch (err) {
                 console.error(err);
-                loading.innerText = "Gagal memuat katalog. Pastikan repo publik.";
+                loading.innerHTML = `<p style="color:red">Gagal memuat katalog: ${err.message}</p>`;
             }
         }
 
+        // Jalankan fungsi saat halaman dibuka
         muatKatalog();
     </script>
 </body>
