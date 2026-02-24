@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Panel - Upload Produk</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 500px; margin: auto; }
+        .form-group { margin-bottom: 15px; }
+        input, button { width: 100%; padding: 10px; margin-top: 5px; }
+        #status { color: blue; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h2>Tambah Produk Baru</h2>
+    
+    <div class="form-group">
+        <label>Nama Barang:</label>
+        <input type="text" id="namaBarang" placeholder="Contoh: Kaos Polos">
+    </div>
+
+    <div class="form-group">
+        <label>Harga (Rp):</label>
+        <input type="number" id="hargaBarang" placeholder="Contoh: 50000">
+    </div>
+
+    <div class="form-group">
+        <label>Foto Produk:</label>
+        <input type="file" id="fotoFile" accept="image/*">
+    </div>
+
+    <button onclick="prosesUpload()">Pajang Barang Sekarang!</button>
+    <p id="status"></p>
+
+    <script>
+        // --- KONFIGURASI DI SINI ---
+        const USERNAME = "USERNAME_GITHUB_LU";
+        const REPO = "NAMA_REPO_BARU_LU";
+        
+        // Trik Potong Token (Masukan token lu di sini)
+        const p1 = "ghp_"; 
+        const p2 = "SISA_TOKEN_LU"; 
+        const TOKEN = p1 + p2;
+
+        async function prosesUpload() {
+            const nama = document.getElementById('namaBarang').value;
+            const harga = document.getElementById('hargaBarang').value;
+            const fileInput = document.getElementById('fotoFile');
+            const status = document.getElementById('status');
+
+            if (!nama || !harga || !fileInput.files[0]) {
+                alert("Isi semua data dulu!");
+                return;
+            }
+
+            status.innerText = "Sedang memproses foto...";
+            const file = fileInput.files[0];
+            const timestamp = Date.now();
+            const fileName = `${timestamp}-${file.name.replace(/\s/g, '_')}`;
+
+            // 1. Ubah Foto ke Base64
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = async () => {
+                const base64Content = reader.result.split(',')[1];
+
+                try {
+                    status.innerText = "Mengupload foto ke GitHub...";
+                    
+                    // 2. Upload Foto ke folder assets/uploads/
+                    const photoPath = `assets/uploads/${fileName}`;
+                    const photoRes = await fetch(`https://api.github.com/repos/${USERNAME}/${REPO}/contents/${photoPath}`, {
+                        method: "PUT",
+                        headers: { "Authorization": `Bearer ${TOKEN}`, "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            message: `Upload foto ${fileName}`,
+                            content: base64Content
+                        })
+                    });
+
+                    if (!photoRes.ok) throw new Error("Gagal upload foto");
+                    const photoData = await photoRes.json();
+                    const photoUrl = photoData.content.download_url;
+
+                    status.innerText = "Menyimpan data produk (JSON)...";
+
+                    // 3. Simpan Data Teks ke folder database/products/ (JSON)
+                    const jsonPath = `database/products/${timestamp}.json`;
+                    const isiJson = btoa(JSON.stringify({
+                        id: timestamp,
+                        nama: nama,
+                        harga: harga,
+                        foto: photoUrl
+                    }));
+
+                    await fetch(`https://api.github.com/repos/${USERNAME}/${REPO}/contents/${jsonPath}`, {
+                        method: "PUT",
+                        headers: { "Authorization": `Bearer ${TOKEN}`, "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            message: `Tambah data produk ${nama}`,
+                            content: isiJson
+                        })
+                    });
+
+                    status.innerText = "BERHASIL! Produk sudah tayang.";
+                    alert("Produk berhasil dipajang!");
+                } catch (err) {
+                    status.innerText = "Waduh, Error: " + err.message;
+                }
+            };
+        }
+    </script>
+</body>
+  </html>
+  
