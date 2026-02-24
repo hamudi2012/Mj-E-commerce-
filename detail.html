@@ -1,1 +1,71 @@
-ggggg
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detail Produk - MJ Store</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: auto; background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+        img { width: 100%; height: auto; }
+        .content { padding: 20px; }
+        h1 { margin-top: 0; color: #333; }
+        .price { font-size: 1.5rem; color: #28a745; font-weight: bold; margin-bottom: 20px; }
+        .btn-wa { display: block; text-align: center; background: #25d366; color: white; padding: 15px; text-decoration: none; border-radius: 10px; font-weight: bold; }
+        .back { display: inline-block; margin-bottom: 15px; text-decoration: none; color: #007bff; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="content">
+        <a href="index.html" class="back">← Kembali ke Katalog</a>
+        <div id="detail-box">
+            <p>Memuat detail produk...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const USERNAME = "hamudi2012";
+    const REPO = "Mj-E-commerce-";
+
+    // 1. Ambil ID dari URL (?id=12345)
+    const urlParams = new URLSearchParams(window.location.search);
+    const productId = urlParams.get('id');
+
+    async function loadDetail() {
+        if (!productId) {
+            document.getElementById('detail-box').innerHTML = "Produk tidak ditemukan!";
+            return;
+        }
+
+        try {
+            // 2. Ambil data langsung dari file JSON di GitHub
+            const response = await fetch(`https://api.github.com/repos/${USERNAME}/${REPO}/contents/database/products/${productId}.json`);
+            const dataFile = await response.json();
+            // Decode Base64 ke JSON
+            const produk = JSON.parse(atob(dataFile.content));
+
+            // 3. Tampilkan ke halaman
+            document.getElementById('detail-box').innerHTML = `
+                <img src="${produk.foto}" alt="${produk.nama}">
+                <h1>${produk.nama}</h1>
+                <div class="price">Rp ${parseInt(produk.harga).toLocaleString('id-ID')}</div>
+                <p>Status: Ready Stok</p>
+                <a href="https://wa.me/628123456789?text=Halo, saya tertarik dengan ${produk.nama}" class="btn-wa">Pesan Sekarang via WhatsApp</a>
+            `;
+            
+            document.title = produk.nama + " - MJ Store";
+
+        } catch (err) {
+            console.error(err);
+            document.getElementById('detail-box').innerHTML = "Gagal memuat data produk.";
+        }
+    }
+
+    loadDetail();
+</script>
+</body>
+  </html>
+
